@@ -1,0 +1,46 @@
+﻿# Visual Studio Solution and Project Files
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+*.log
+*.pfx
+*.vsix
+*.suo
+.nuget/
+build/
+**/*.pdb
+
+# Visual Studio temporary files
+## User-specific files
+*.user
+*.config.user
+
+## ReSharper
+*.resharper
+
+## Visual Studio cache files
+.vs/
+## Note: Some projects (e.g. ASP.NET Core) might need to track files in .vs/
+# If you are using ASP.NET Core, you might need to comment out the line above.
+
+# NuGet files
+# NuGet packages
+*.nupkg
+# The packages folder (if not using PackageReference)
+[Pp]ackages/
+
+# Microsoft Test files
+*.trx
+*.dll.config
+
+# Rider/JetBrains IDE
+.idea/
+
+# Other common files
+# Localizable files
+*.bak
