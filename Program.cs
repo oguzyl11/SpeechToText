@@ -8,8 +8,7 @@ namespace VoskMicDemo
 {
     class Program
     {
-        // Vosk'un döndürdüğü JSON'dan metni temizce ayıklamak için
-        // yardımcı bir fonksiyon.
+        // JSON'dan metni ayıklamak için yardımcı fonksiyon (değişiklik yok)
         static string GetTextFromJson(string json, string key)
         {
             try
@@ -24,7 +23,6 @@ namespace VoskMicDemo
             }
             catch (JsonException)
             {
-                // Geçersiz veya boş JSON gelirse (örn. konuşma başlamadığında)
                 return string.Empty;
             }
             return string.Empty;
@@ -32,9 +30,9 @@ namespace VoskMicDemo
 
         static void Main(string[] args)
         {
-            // 1. Vosk Modelini Yükle
-            Vosk.Vosk.SetLogLevel(0); // Vosk loglarını açar (hata ayıklama için)
-            string modelPath = "model-tr"; // Adım 0'da kopyaladığınız klasörün adı
+            // 1. Vosk Modelini Yükle (değişiklik yok)
+            Vosk.Vosk.SetLogLevel(0);
+            string modelPath = "model-tr";
 
             if (!Directory.Exists(modelPath))
             {
@@ -45,53 +43,43 @@ namespace VoskMicDemo
                 return;
             }
 
-            // 'using' blokları, model ve tanıyıcıyı iş bittiğinde otomatik temizler
             using (Model model = new Model(modelPath))
             {
-                // 2. Vosk Tanıyıcıyı Oluştur
-                // ÖNEMLİ: Sample Rate (16000), NAudio formatıyla EŞLEŞMELİDİR.
+                // 2. Vosk Tanıyıcıyı Oluştur (değişiklik yok)
                 using (VoskRecognizer recognizer = new VoskRecognizer(model, 16000.0f))
                 {
-                    recognizer.SetMaxAlternatives(0); // Sadece en iyi sonucu göster
-                    recognizer.SetWords(true); // Kelime zamanlamasını aç (isteğe bağlı)
+                    recognizer.SetMaxAlternatives(0);
+                    recognizer.SetWords(true);
 
-                    // 3. NAudio ile Mikrofonu Ayarla
-                    // 'using' ile mikrofonun da düzgün kapatılmasını sağlarız
+                    // 3. NAudio ile Mikrofonu Ayarla (değişiklik yok)
                     using (WaveInEvent waveIn = new WaveInEvent())
                     {
-                        // ÖNEMLİ: Vosk'un beklediği format (16kHz, 16-bit, Mono)
-                        // Bu formatı NAudio'ya belirtmeliyiz.
-                        waveIn.DeviceNumber = 0; // 0, varsayılan mikrofon demektir
+                        waveIn.DeviceNumber = 0;
                         waveIn.WaveFormat = new WaveFormat(16000, 16, 1);
+
+                        // === DEĞİŞİKLİK BURADA BAŞLIYOR ===
 
                         // Mikrofondan ses verisi geldiğinde bu event (olay) tetiklenir
                         waveIn.DataAvailable += (sender, e) =>
                         {
                             // Sesi yakala ve anında Vosk'a besle
-                            if (recognizer.AcceptWaveform(e.Buffer, e.BytesRecorded))
+                            // 'if' kontrolünü kaldırdık, çünkü artık 'Result' kullanmıyoruz.
+                            recognizer.AcceptWaveform(e.Buffer, e.BytesRecorded);
+
+                            // Sadece kısmi sonucu (PartialResult) alıp gösteriyoruz.
+                            // Bu, konuşma devam ettikçe sürekli güncellenecek.
+                            string partialText = GetTextFromJson(recognizer.PartialResult(), "partial");
+
+                            // Eğer kısmi metin boş değilse, aynı satıra yazdır (\r ile)
+                            if (!string.IsNullOrEmpty(partialText))
                             {
-                                // AcceptWaveform 'true' dönerse, bir cümlenin bittiğini düşünür.
-                                // 'recognizer.Result()' tam sonucu verir.
-                                string resultText = GetTextFromJson(recognizer.Result(), "text");
-                                if (!string.IsNullOrEmpty(resultText))
-                                {
-                                    Console.WriteLine($"[Cümle Bitti]: {resultText}");
-                                }
-                            }
-                            else
-                            {
-                                // Henüz cümle bitmediyse, 'PartialResult' ile kısmi sonucu al
-                                string partialText = GetTextFromJson(recognizer.PartialResult(), "partial");
-                                if (!string.IsNullOrEmpty(partialText))
-                                {
-                                    // Kısmi sonucu aynı satıra yazdır (\r ile satır başına dön)
-                                    // Bu, "canlı yazma" efekti verir.
-                                    Console.Write($"[Konuşuluyor...]: {partialText}\r");
-                                }
+                                Console.Write($"[Konuşuluyor...]: {partialText}\r");
                             }
                         };
 
-                        // 4. Dinlemeyi Başlat
+                        // === DEĞİŞİKLİK BURADA BİTİYOR ===
+
+                        // 4. Dinlemeyi Başlat (değişiklik yok)
                         waveIn.StartRecording();
                         Console.WriteLine("Dinliyorum... Konuşmaya başlayın.");
                         Console.WriteLine("(Durdurmak ve son sonucu görmek için Enter'a basın)");
@@ -100,9 +88,15 @@ namespace VoskMicDemo
                         // 5. Durdur ve Temizle
                         waveIn.StopRecording();
 
-                        // Kayıt durduktan sonra, bellekte kalan son kısmı da işle
-                        // ve 'FinalResult' ile sonucu al.
+                        // Kayıt durduktan sonra, bellekte kalan tüm sesi işle
+                        // ve 'FinalResult' ile TAM ve TEK bir sonuç al.
                         string finalText = GetTextFromJson(recognizer.FinalResult(), "text");
+
+                        // Önceki satırdaki "[Konuşuluyor...]" yazısını temizlemek için
+                        // boşluklarla dolu bir satır yazıyoruz.
+                        Console.Write(new string(' ', Console.WindowWidth - 1) + "\r");
+
+                        // Şimdi son metni temiz bir şekilde yazdırıyoruz
                         Console.WriteLine($"\n[Son Metin]: {finalText}");
                     }
                 }
